@@ -938,4 +938,98 @@ def pixelAnalysis(area, tp):
     else:
         nS = int(newShp, 2)
         return [(truePulse - smallPulse), nS]
-                    
+      
+      
+      
+def lorentzfit(data,amp,cent,fwhm):
+    m = 0.0037168339915133394
+    b = 0.002116795017471418
+    bins = int((max(data) - min(data))/2)
+    (counts, edges) = np.histogram(data, bins=bins)
+    n = len(counts)
+    chan = 0.5 * (edges[0:n] + edges[1:n + 1])
+    chan = aduToeV(chan, m, b)
+    sig = fwhm / 2
+    cerr = 1 + np.sqrt(counts + 0.75)
+    cerr = cerr[:-1]
+    chan = chan[:-1]
+    counts = counts[:-1]
+    lorentzian = lmfit.models.LorentzianModel(prefix = 'l1_')
+    pars = lorentzian.make_params()
+    pars['l1_amplitude'].set(value = amp,min = 0)
+    pars['l1_center'].set(value=cent, min=min(chan),max = max(chan))
+    pars['l1_sigma'].set(value=sig, min=0)
+    out = lorentzian.fit(counts, pars, x=chan,weights = 1/cerr)
+    r_chisq = out.redchi
+    l1_norm = out.best_values['l1_amplitude']
+    l1_cent = out.best_values['l1_center']
+    l1_sigma = out.best_values['l1_sigma']
+    l1_fwhm = 2*l1_sigma
+    covar = out.covar
+    #err_norm = np.sqrt(abs(covar[0][0]))
+    err_cent = np.sqrt(abs(covar[1][1]))
+    err_sigma = np.sqrt(abs(covar[2][2]))
+    err_fwhm = np.sqrt((err_sigma*2)**2)
+    height = 0.3183099 * l1_norm / max(2.220446049250313e-16, l1_sigma)
+    #err_h = height*0.3183099* np.sqrt(((err_norm)/(l1_norm))**2 + (
+            #((err_sigma) / (l1_sigma))**2))
+    print(out.fit_report(min_correl=0.5))
+    fig, axes = plt.subplots(1, figsize=(10, 8))
+    textstr = '\n'.join((
+        r'Counts= %.2f' % (height),
+        r'Centroid = %.2f +- %.2f eV' % (l1_cent,err_cent),
+        r'FWHM = %.2f +- %.2f eV' % (l1_fwhm,err_fwhm),
+        r'$\chi^2/dov $= %.2f' % (r_chisq)))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    axes.text(.22, .89, textstr, fontsize=8, ha='center', va='center', transform=axes.transAxes, bbox=props)
+    axes.errorbar(chan, counts, cerr, fmt='.')
+    axes.plot(chan, out.best_fit, 'r-', label='best fit')
+    axes.legend(loc='best')
+    return (height,l1_cent,l1_fwhm,r_chisq)
+
+
+def voigtfit(data,amplitude,cent,fwhm):
+    m = 0.0037168339915133394
+    b = 0.002116795017471418
+    bins = int((max(data) - min(data))/2)
+    (counts, edges) = np.histogram(data, bins=bins)
+    n = len(counts)
+    chan = 0.5 * (edges[0:n] + edges[1:n + 1])
+    chan = aduToeV(chan, m, b)
+    sig = fwhm / 2
+    cerr = 1 + np.sqrt(counts + 0.75)
+    cerr = cerr[:-1]
+    chan = chan[:-1]
+    counts = counts[:-1]
+    lorentzian = lmfit.models.VoigtModel(prefix = 'v1_')
+    pars = lorentzian.make_params()
+    pars['v1_amplitude'].set(value= amplitude,min = 0)
+    pars['v1_center'].set(value=cent, min=min(chan),max = max(chan))
+    pars['v1_gamma'].set(value = sig)
+    pars['v1_sigma'].set(value=sig, min=0)
+    out = lorentzian.fit(counts, pars, x=chan,weights = 1/cerr)
+    r_chisq = out.redchi
+    v1_norm = out.best_values['v1_amplitude']
+    v1_cent = out.best_values['v1_center']
+    v1_sigma = out.best_values['v1_sigma']
+    v1_gamma = out.best_values['v1_gamma']
+    v1_fwhm = 1.0692*v1_gamma+np.sqrt(0.8664*v1_gamma**2+5.545083*v1_sigma**2)
+    covar = out.covar
+    #err_norm = np.sqrt(abs(covar[0][0]))
+    err_cent = np.sqrt(abs(covar[1][1]))
+    err_sigma = np.sqrt(abs(covar[2][2]))
+    #err_fwhm = np.sqrt((err_sigma*2)**2)
+    height = (v1_norm/(max(2.220446049250313e-16, v1_sigma*np.sqrt(2*np.pi))))*special.wofz((1j*v1_gamma)/(max(2.220446049250313e-16, v1_sigma*np.sqrt(2)))).real
+    print(out.fit_report(min_correl=0.5))
+    fig, axes = plt.subplots(1, figsize=(10, 8))
+    textstr = '\n'.join((
+        r'Height= %.2f' % (height),
+        r'Centroid = %.2f +- %.2f eV' % (v1_cent,err_cent),
+        r'FWHM = %.2f eV' % (v1_fwhm),
+        r'$\chi^2/dov $= %.2f' % (r_chisq)))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    axes.text(.22, .89, textstr, fontsize=8, ha='center', va='center', transform=axes.transAxes, bbox=props)
+    axes.errorbar(chan, counts, cerr, fmt='.')
+    axes.plot(chan, out.best_fit, 'r-', label='best fit')
+    axes.legend(loc='best')
+    return (height,v1_cent,v1_fwhm,r_chisq)
