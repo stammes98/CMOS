@@ -13,3 +13,10 @@ bool liveProccess - determines if you will process each image after taking it.
 
 Software flow:
 Program init -> doLiveCamera init -> take photo -> save photo to temp.FTS -> save photo to imgPath if saveImages is true -> call process.py if liveProccess is true -> update event list at outPath -> take photo -> repeat
+
+To run the program:
+simply type "make" and then "make run"
+If you encounter any errors in the compiling of the program, type "make clean" and then try again
+If you made any updates to the .cpp or .h files, type "make" again for the program to reflect those changes. This is not needed for making edits to the python files
+
+All the constants (t, tp, etc) are defined in process.py rather than CMOSUtilsLive.py
