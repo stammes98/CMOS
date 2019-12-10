@@ -10,3 +10,6 @@ string darkPath - if you're doing live processing, this will be the path to your
 string biasPath - same as above but for the bias frames
 string outPath - path to the .CSV where each processed frame's ep, ex and ey will be written to
 bool liveProccess - determines if you will process each image after taking it.
+
+Software flow:
+Program init -> doLiveCamera init -> take photo -> save photo to temp.FTS -> save photo to imgPath if saveImages is true -> call process.py if liveProccess is true -> update event list at outPath -> take photo -> repeat
