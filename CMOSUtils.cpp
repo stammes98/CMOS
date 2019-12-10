@@ -214,7 +214,7 @@ int doLiveCamera(int nPhotos, double exposure, string imgPath, bool saveImages, 
 				fits_write_img(fptr, TSHORT, fpixel, nelements, pMem, &status);
 				fits_close_file(fptr, &status);
 				fits_report_error(stderr, status);
-				
+
 				string args = darkPath;
 				args = args + string(" ") + biasPath;
 				string command = "python process.py ";
@@ -223,7 +223,9 @@ int doLiveCamera(int nPhotos, double exposure, string imgPath, bool saveImages, 
 				} else {
 					command = command + imgPath +  string(" False ") + outPath + " " +  args;
 				}
-				system(command.c_str());
+				if (liveProccess) {
+					system(command.c_str());
+				}
 				doSleep(exposure);
 			} else {
 				printf("Error %d\n", nRet);
